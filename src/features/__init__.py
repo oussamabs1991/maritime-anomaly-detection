@@ -9,5 +9,5 @@ __all__ = [
     "VesselFeatureExtractor",
     "TrajectoryKalmanFilter",
     "test_feature_extraction",
-    "test_kalman_filter"
+    "test_kalman_filter",
 ]

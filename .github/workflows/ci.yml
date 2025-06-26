@@ -30,7 +30,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ env.CACHE_VERSION }}-${{ hashFiles('**/requirements.txt') }}
@@ -208,7 +208,7 @@ jobs:
         /usr/bin/time -v python main.py --zip-file data/raw/synthetic_ais_data.zip --csv-name synthetic_ais_data.csv --test-mode 2> performance.log
         
     - name: Upload performance report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-report
         path: performance.log
@@ -240,13 +240,15 @@ jobs:
         cd docs && make html
         
     - name: Upload documentation
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: docs/_build/html/
 
   # Security scanning
   security:
+    permissions: # <-- ADD THIS BLOCK
+      security-events: write
     runs-on: ubuntu-latest
     
     steps:
