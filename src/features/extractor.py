@@ -3,10 +3,10 @@ Feature extraction utilities for vessel trajectory analysis
 """
 import numpy as np
 import pandas as pd
-from scipy.stats import circmean, circstd
 from geopy.distance import geodesic
-from sklearn.impute import SimpleImputer
 from loguru import logger
+from scipy.stats import circmean, circstd
+from sklearn.impute import SimpleImputer
 
 from ..config import config
 

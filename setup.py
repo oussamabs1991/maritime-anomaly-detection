@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="maritime-anomaly-detection",
     version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Oussama",
+    author_email="oussama.bensalem@enit.utm.tn",
     description="Maritime vessel type classification using AIS data with ensemble learning",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/maritime-anomaly-detection",
+    url="https://github.com/oussamabs1991/maritime-anomaly-detection",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",

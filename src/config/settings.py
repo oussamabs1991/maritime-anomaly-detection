@@ -4,11 +4,11 @@ Configuration settings for Maritime Anomaly Detection
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
-from pydantic_settings import BaseSettings
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):

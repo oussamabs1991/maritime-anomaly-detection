@@ -1,13 +1,13 @@
 """
 Data preprocessing utilities for AIS data
 """
-from typing import List, Optional
 import warnings
+from typing import List, Optional
 
-import pandas as pd
 import numpy as np
-from scipy.stats import zscore
+import pandas as pd
 from loguru import logger
+from scipy.stats import zscore
 
 from ..config import config
 

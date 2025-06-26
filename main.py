@@ -4,10 +4,11 @@ Maritime Anomaly Detection - Main Entry Point
 This script provides the main interface for running the maritime vessel type
 classification pipeline using AIS data.
 """
-import sys
 import argparse
-from pathlib import Path
 import os
+import sys
+from pathlib import Path
+
 from loguru import logger
 
 # Add src to path

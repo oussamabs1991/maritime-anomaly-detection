@@ -1,17 +1,18 @@
 """
 Tests for machine learning models
 """
-import pytest
-import numpy as np
-import pandas as pd
+import sys
 from pathlib import Path
 
-import sys
+import numpy as np
+import pandas as pd
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.models import TraditionalMLModels, DeepLearningModels, StackingEnsemble
 from src.config import Config
+from src.models import (DeepLearningModels, StackingEnsemble,
+                        TraditionalMLModels)
 
 
 class TestTraditionalMLModels:

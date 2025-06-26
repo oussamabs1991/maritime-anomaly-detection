@@ -3,8 +3,8 @@ Kalman filter implementation for trajectory smoothing
 """
 import numpy as np
 import pandas as pd
-from pykalman import KalmanFilter
 from loguru import logger
+from pykalman import KalmanFilter
 
 from ..config import config
 

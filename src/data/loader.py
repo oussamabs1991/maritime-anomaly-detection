@@ -2,13 +2,13 @@
 Data loading utilities for AIS data
 """
 import os
+import warnings
 import zipfile
 from pathlib import Path
 from typing import Optional, Union
-import warnings
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from loguru import logger
 
 from ..config import config

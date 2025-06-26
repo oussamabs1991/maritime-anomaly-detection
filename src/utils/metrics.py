@@ -1,23 +1,16 @@
 """
 Evaluation metrics and performance analysis utilities
 """
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any, Optional
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
-    confusion_matrix,
-    roc_auc_score,
-    precision_recall_curve,
-    roc_curve,
-    auc,
-)
-from sklearn.preprocessing import LabelBinarizer
 from loguru import logger
+from sklearn.metrics import (accuracy_score, auc, classification_report,
+                             confusion_matrix, f1_score,
+                             precision_recall_curve, precision_score,
+                             recall_score, roc_auc_score, roc_curve)
+from sklearn.preprocessing import LabelBinarizer
 
 
 class ModelEvaluator:

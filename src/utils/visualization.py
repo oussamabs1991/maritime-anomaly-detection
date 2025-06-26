@@ -1,16 +1,18 @@
 """
 Visualization utilities for model evaluation and data analysis
 """
+import warnings
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Dict, Optional, Tuple
-from pathlib import Path
-import warnings
-from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve
-from sklearn.preprocessing import LabelBinarizer
 from loguru import logger
+from sklearn.metrics import (auc, confusion_matrix, precision_recall_curve,
+                             roc_curve)
+from sklearn.preprocessing import LabelBinarizer
 
 from ..config import config
 

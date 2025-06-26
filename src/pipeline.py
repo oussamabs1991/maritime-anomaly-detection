@@ -1,24 +1,24 @@
 """
 Main pipeline for maritime vessel type classification
 """
-import time
 import gc
-from pathlib import Path
-from typing import Tuple, Dict, Any, Optional
+import time
 import warnings
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.utils.class_weight import compute_class_weight
 from imblearn.over_sampling import SMOTE
-import joblib
 from loguru import logger
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
 
 from src.config import config
 from src.data import AISDataLoader, AISPreprocessor, setup_data_paths
-from src.features import VesselFeatureExtractor, TrajectoryKalmanFilter
+from src.features import TrajectoryKalmanFilter, VesselFeatureExtractor
 from src.models import StackingEnsemble
 from src.utils import ModelEvaluator, ModelVisualizer
 
@@ -69,7 +69,8 @@ class MaritimePipeline:
             test_feature_extraction()
 
             # Test models
-            from .models import test_traditional_models, test_deep_learning_models
+            from .models import (test_deep_learning_models,
+                                 test_traditional_models)
 
             test_traditional_models()
             test_deep_learning_models()
