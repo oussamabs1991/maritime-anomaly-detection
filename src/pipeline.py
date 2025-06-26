@@ -19,7 +19,7 @@ from loguru import logger
 from .config import config
 from .data import AISDataLoader, AISPreprocessor, setup_data_paths
 from .features import VesselFeatureExtractor, TrajectoryKalmanFilter
-from .models import StackingEnsemble
+from src.models import StackingEnsemble
 from .utils import ModelEvaluator, ModelVisualizer
 
 warnings.filterwarnings('ignore')
