@@ -47,8 +47,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov pytest-xdist
+
+    - name: Install package in editable mode
+      run: |
         pip install -e .
-        
+        pip list | grep maritime
+        python -c "import maritime_anomaly_detection; print('Package installed successfully')" || echo "Package import failed"
+
+    - name: Verify package installation
+      run: |
+        python -c "import sys; print('Python version:', sys.version)"
+        python -c "import os; print('Working directory:', os.getcwd())"
+        python -c "import os; print('Directory contents:', os.listdir('.'))"
+        python -c "import os; print('Src exists:', os.path.exists('src'))"
+        python test_package_structure.py
+        python test_smoke_imports.py
+
     - name: Run smoke tests
       run: |
         python main.py --smoke-tests-only

@@ -12,21 +12,86 @@ from loguru import logger
 
 # Ensure src is in Python path for both development and CI environments
 src_path = str(Path(__file__).parent / "src")
+project_root = str(Path(__file__).parent)
+
+# Add paths to sys.path if not already present
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
-
-# Add project root to path as well for absolute imports
-project_root = str(Path(__file__).parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Now import the modules
+# Debug information for CI troubleshooting
+import os
+if os.getenv('CI') or os.getenv('GITHUB_ACTIONS'):
+    logger.info(f"CI Environment detected")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Script location: {__file__}")
+    logger.info(f"Project root: {project_root}")
+    logger.info(f"Src path: {src_path}")
+    logger.info(f"Src directory exists: {os.path.exists(src_path)}")
+    logger.info(f"Python path: {sys.path[:3]}...")  # Show first 3 entries
+
+# Import modules with multiple fallback strategies
+config = None
+load_config_from_yaml = None
+MaritimePipeline = None
+
+# Strategy 1: Try standard package import (when installed with pip install -e .)
 try:
     from src.config import config, load_config_from_yaml
     from src.pipeline import MaritimePipeline
-except ImportError as e:
-    logger.error(f"Failed to import required modules: {e}")
-    logger.error("Please ensure the package is properly installed with 'pip install -e .'")
+    logger.info("Successfully imported modules using standard package import")
+except ImportError as e1:
+    logger.warning(f"Standard package import failed: {e1}")
+
+    # Strategy 2: Try direct path import (development mode)
+    try:
+        # Ensure current directory is in path
+        current_dir = os.getcwd()
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+
+        from src.config import config, load_config_from_yaml
+        from src.pipeline import MaritimePipeline
+        logger.info("Successfully imported modules using direct path import")
+    except ImportError as e2:
+        logger.error(f"Direct path import also failed: {e2}")
+
+        # Strategy 3: Try absolute import with explicit path manipulation
+        try:
+            # Force add both project root and src to path
+            abs_project_root = os.path.abspath(os.path.dirname(__file__))
+            abs_src_path = os.path.join(abs_project_root, 'src')
+
+            for path in [abs_project_root, abs_src_path]:
+                if path not in sys.path:
+                    sys.path.insert(0, path)
+
+            from src.config import config, load_config_from_yaml
+            from src.pipeline import MaritimePipeline
+            logger.info("Successfully imported modules using absolute path import")
+        except ImportError as e3:
+            logger.error(f"All import strategies failed!")
+            logger.error(f"Error 1 (standard): {e1}")
+            logger.error(f"Error 2 (direct): {e2}")
+            logger.error(f"Error 3 (absolute): {e3}")
+
+            # Final debugging information
+            logger.error("=== Final Debug Information ===")
+            logger.error(f"Working directory: {os.getcwd()}")
+            logger.error(f"Script location: {os.path.abspath(__file__)}")
+            logger.error(f"Python path: {sys.path[:5]}...")  # Show first 5 entries
+            if os.path.exists('src'):
+                logger.error(f"Src directory contents: {os.listdir('src')}")
+            else:
+                logger.error("Src directory does not exist!")
+
+            logger.error("Please ensure the package is properly installed with 'pip install -e .'")
+            sys.exit(1)
+
+# Verify that imports were successful
+if config is None or MaritimePipeline is None:
+    logger.error("Import verification failed - modules are None")
     sys.exit(1)
 
 
