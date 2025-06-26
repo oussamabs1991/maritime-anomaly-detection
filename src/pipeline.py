@@ -256,15 +256,7 @@ class MaritimePipeline:
     def split_and_scale_data(self, X: np.ndarray, y: np.ndarray, 
                             sequences: np.ndarray) -> Tuple:
         """
-        Split data into train/test and apply scaling
-        
-        Args:
-            X: Feature matrix
-            y: Target labels
-            sequences: Sequence data
-            
-        Returns:
-            Tuple of split and scaled data
+        Split data into train/test and apply scaling with robust handling for small datasets
         """
         logger.info("Splitting and scaling data")
         start_time = time.time()
@@ -275,96 +267,171 @@ class MaritimePipeline:
         else:
             y_encoded = y
         
-        # Check minimum class count for stratification
-        class_counts = pd.Series(y_encoded).value_counts()
+        # Check class distribution for stratification
+        unique_classes, class_counts = np.unique(y_encoded, return_counts=True)
         min_class_count = class_counts.min()
         
-        stratify_y = y_encoded if min_class_count >= 2 else None
-        if stratify_y is None:
+        # Determine if stratification is possible
+        stratify_y = None
+        if min_class_count >= 2:
+            stratify_y = y_encoded
+            logger.info(f"Using stratified split - minimum class count: {min_class_count}")
+        else:
             logger.warning(f"Skipping stratification - minimum class count: {min_class_count}")
+            # For very small datasets, use a different test size
+            if len(X) < 20:
+                test_size = max(0.1, 2/len(X))  # At least 2 samples or 10%
+                logger.info(f"Adjusting test size to {test_size:.2f} for small dataset")
+            else:
+                test_size = self.config.TEST_SIZE
         
         # Split data
-        X_train, X_test, y_train, y_test, seq_train, seq_test = train_test_split(
-            X, y_encoded, sequences,
-            test_size=self.config.TEST_SIZE,
-            random_state=self.config.RANDOM_STATE,
-            stratify=stratify_y
-        )
+        try:
+            X_train, X_test, y_train, y_test, seq_train, seq_test = train_test_split(
+                X, y_encoded, sequences,
+                test_size=test_size if 'test_size' in locals() else self.config.TEST_SIZE,
+                random_state=self.config.RANDOM_STATE,
+                stratify=stratify_y
+            )
+        except ValueError as e:
+            logger.warning(f"Stratified split failed: {e}. Using random split.")
+            X_train, X_test, y_train, y_test, seq_train, seq_test = train_test_split(
+                X, y_encoded, sequences,
+                test_size=test_size if 'test_size' in locals() else self.config.TEST_SIZE,
+                random_state=self.config.RANDOM_STATE
+            )
         
         # Scale features
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
         
         # Calculate class weights
-        classes = np.unique(y_train)
-        weights = compute_class_weight('balanced', classes=classes, y=y_train)
-        class_weights = dict(zip(classes, weights))
+        try:
+            classes = np.unique(y_train)
+            weights = compute_class_weight('balanced', classes=classes, y=y_train)
+            class_weights = dict(zip(classes, weights))
+        except Exception as e:
+            logger.warning(f"Could not compute class weights: {e}. Using uniform weights.")
+            classes = np.unique(y_train)
+            class_weights = {cls: 1.0 for cls in classes}
         
         logger.info(f"Data splitting and scaling completed in {time.time() - start_time:.2f} seconds")
         logger.info(f"Train set: {X_train_scaled.shape[0]} samples")
         logger.info(f"Test set: {X_test_scaled.shape[0]} samples")
+        logger.info(f"Class distribution - Train: {dict(zip(*np.unique(y_train, return_counts=True)))}")
+        logger.info(f"Class distribution - Test: {dict(zip(*np.unique(y_test, return_counts=True)))}")
         
         return (X_train_scaled, X_test_scaled, y_train, y_test, 
                 seq_train, seq_test, class_weights)
-    
+
     def apply_smote(self, X_train: np.ndarray, y_train: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Apply SMOTE for handling class imbalance
-        
-        Args:
-            X_train: Training features
-            y_train: Training labels
-            
-        Returns:
-            Tuple of resampled (X_train, y_train)
+        Apply SMOTE for handling class imbalance with robust small dataset handling
         """
         logger.info("Applying SMOTE for class balancing")
         
         # Check if SMOTE is possible
         class_counts = pd.Series(y_train).value_counts()
-        min_samples_required = self.config.SMOTE_K_NEIGHBORS + 1
+        min_samples_required = min(self.config.SMOTE_K_NEIGHBORS + 1, 3)  # Reduce requirement for small datasets
+        
+        # Check if we have enough samples and multiple classes
+        if len(class_counts) < 2:
+            logger.warning("SMOTE skipped - only one class present")
+            return X_train, y_train
         
         if class_counts.min() >= min_samples_required:
-            smote = SMOTE(
-                sampling_strategy='auto',
-                random_state=self.config.RANDOM_STATE,
-                k_neighbors=self.config.SMOTE_K_NEIGHBORS
-            )
-            
-            X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
-            
-            logger.info(f"SMOTE applied: {X_train.shape[0]} -> {X_resampled.shape[0]} samples")
-            
-            return X_resampled, y_resampled
+            try:
+                # Adjust k_neighbors for small datasets
+                k_neighbors = min(self.config.SMOTE_K_NEIGHBORS, class_counts.min() - 1, 5)
+                
+                smote = SMOTE(
+                    sampling_strategy='auto',
+                    random_state=self.config.RANDOM_STATE,
+                    k_neighbors=k_neighbors
+                )
+                
+                X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+                
+                logger.info(f"SMOTE applied: {X_train.shape[0]} -> {X_resampled.shape[0]} samples")
+                logger.info(f"SMOTE k_neighbors: {k_neighbors}")
+                
+                return X_resampled, y_resampled
+                
+            except Exception as e:
+                logger.warning(f"SMOTE failed: {e}. Using original data.")
+                return X_train, y_train
         else:
             logger.warning(f"SMOTE skipped - minimum class size ({class_counts.min()}) "
-                          f"< required ({min_samples_required})")
+                        f"< required ({min_samples_required})")
             return X_train, y_train
     
     def train_ensemble(self, X_train: np.ndarray, y_train: np.ndarray,
-                      seq_train: np.ndarray) -> StackingEnsemble:
+                    seq_train: np.ndarray) -> StackingEnsemble:
         """
-        Train the stacking ensemble
-        
-        Args:
-            X_train: Training features
-            y_train: Training labels
-            seq_train: Training sequences
-            
-        Returns:
-            Trained ensemble
+        Train the stacking ensemble with proper sequence data handling
         """
         logger.info("Training ensemble model")
         start_time = time.time()
         
-        # Apply SMOTE to traditional ML features
-        X_train_smote, y_train_smote = self.apply_smote(X_train, y_train)
+        # Check if we have sequence data
+        has_sequences = seq_train is not None and len(seq_train) > 0
         
-        # Train ensemble (use original sequences, resampled features)
-        self.ensemble.fit(X_train_smote, y_train_smote, seq_train)
+        if has_sequences:
+            logger.info(f"Training with sequence data - features: {X_train.shape}, sequences: {seq_train.shape}")
+            
+            # For sequence data, we need to be careful with SMOTE
+            # Option 1: Skip SMOTE when we have sequences (recommended for simplicity)
+            logger.info("Skipping SMOTE due to sequence data compatibility")
+            X_train_final = X_train
+            y_train_final = y_train
+            seq_train_final = seq_train
+            
+            # Alternative Option 2: Apply SMOTE and replicate sequences
+            # Uncomment this section if you want to use SMOTE with sequences:
+            """
+            # Apply SMOTE to features only
+            X_train_smote, y_train_smote = self.apply_smote(X_train, y_train)
+            
+            if len(X_train_smote) > len(X_train):
+                # SMOTE was applied, need to handle sequences
+                logger.info(f"SMOTE expanded dataset from {len(X_train)} to {len(X_train_smote)} samples")
+                
+                # Create mapping for synthetic samples
+                # For synthetic samples, we'll use the sequence from the nearest original sample
+                seq_train_expanded = np.zeros((len(X_train_smote), seq_train.shape[1], seq_train.shape[2]))
+                
+                # Copy original sequences
+                seq_train_expanded[:len(X_train)] = seq_train
+                
+                # For synthetic samples, replicate sequences from original samples
+                # This is a simplified approach - in practice, you might want more sophisticated sequence generation
+                for i in range(len(X_train), len(X_train_smote)):
+                    # Use sequence from a random original sample
+                    orig_idx = np.random.randint(0, len(X_train))
+                    seq_train_expanded[i] = seq_train[orig_idx]
+                
+                seq_train_final = seq_train_expanded
+            else:
+                seq_train_final = seq_train
+                
+            X_train_final = X_train_smote
+            y_train_final = y_train_smote
+            """
+            
+        else:
+            # No sequence data, apply SMOTE normally
+            logger.info("No sequence data - applying SMOTE to features")
+            X_train_final, y_train_final = self.apply_smote(X_train, y_train)
+            seq_train_final = None
+        
+        # Train ensemble
+        self.ensemble.fit(X_train_final, y_train_final, seq_train_final)
         self.is_fitted = True
         
         logger.info(f"Ensemble training completed in {time.time() - start_time:.2f} seconds")
+        logger.info(f"Final training data - Features: {X_train_final.shape}, Labels: {y_train_final.shape}")
+        if seq_train_final is not None:
+            logger.info(f"Final sequence data: {seq_train_final.shape}")
         
         return self.ensemble
     
@@ -563,19 +630,30 @@ class MaritimePipeline:
         
         # Step 8: Evaluate model
         class_names = list(self.label_encoder.classes_) if hasattr(self.label_encoder, 'classes_') else None
-        evaluation_results = self.evaluate_model(X_test, y_test, seq_test, class_names)
-        
-        # Step 9: Create visualizations
+
+        # Make predictions first
         predictions = self.ensemble.predict(X_test, seq_test)
         probabilities = self.ensemble.predict_proba(X_test, seq_test)
-        
-        # Convert test labels back for visualization
+
+        # Ensure consistent label types for evaluation
         if hasattr(self.label_encoder, 'classes_'):
-            y_test_viz = self.label_encoder.inverse_transform(y_test)
+            # Convert both to original string labels
+            y_test_str = self.label_encoder.inverse_transform(y_test)
+            if isinstance(predictions[0], (int, np.integer)):
+                predictions_str = self.label_encoder.inverse_transform(predictions)
+            else:
+                predictions_str = predictions
         else:
-            y_test_viz = y_test
-        
-        plots = self.create_visualizations(y_test_viz, predictions, probabilities, class_names)
+            y_test_str = y_test
+            predictions_str = predictions
+
+        # Evaluate with consistent label types
+        evaluation_results = self.evaluator.evaluate_model(
+            y_test_str, predictions_str, probabilities, class_names, "StackingEnsemble"
+        )
+
+        # Step 9: Create visualizations
+        plots = self.create_visualizations(y_test_str, predictions_str, probabilities, class_names)
         
         # Step 10: Save model
         model_path = self.save_model()

@@ -102,15 +102,20 @@ class Config(BaseSettings):
         return v
     
     def get_test_config(self) -> 'Config':
-        """Get configuration optimized for testing"""
+        """Get configuration optimized for testing with small datasets"""
         test_config = self.model_copy()
         test_config.TEST_MODE = True
-        test_config.CV_FOLDS = 3
+        test_config.CV_FOLDS = max(2, min(3, 5))  # Adaptive fold count
         test_config.EPOCHS = self.TEST_EPOCHS
         test_config.N_ESTIMATORS = self.TEST_TREES
         test_config.RF_MAX_DEPTH = self.RF_TEST_MAX_DEPTH
         test_config.LGB_MAX_DEPTH = self.LGB_TEST_MAX_DEPTH
         test_config.LGB_LEARNING_RATE = self.LGB_TEST_LEARNING_RATE
+        test_config.MIN_TRAJECTORY_LENGTH = 3  # Reduce for small datasets
+        test_config.SAMPLE_SIZE = 0.02  # Slightly larger sample
+        test_config.SMOTE_K_NEIGHBORS = 3  # Reduce for small datasets
+        test_config.BATCH_SIZE = 32  # Smaller batch size
+        test_config.LSTM_BATCH_SIZE = 16  # Even smaller for LSTM
         return test_config
 
 

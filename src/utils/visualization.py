@@ -413,128 +413,161 @@ class ModelVisualizer:
         return fig
     
     def create_evaluation_dashboard(self, y_true: np.ndarray, y_pred: np.ndarray,
-                                   y_proba: np.ndarray = None,
-                                   class_names: List[str] = None,
-                                   model_name: str = "Model") -> plt.Figure:
+                                y_proba: np.ndarray = None,
+                                class_names: List[str] = None,
+                                model_name: str = "Model") -> plt.Figure:
         """
-        Create comprehensive evaluation dashboard
-        
-        Args:
-            y_true: True labels
-            y_pred: Predicted labels
-            y_proba: Predicted probabilities (optional)
-            class_names: Names of classes
-            model_name: Name of the model
-            
-        Returns:
-            Matplotlib figure with dashboard
+        Create comprehensive evaluation dashboard with robust label handling
         """
-        # Determine figure layout based on available data
-        if y_proba is not None:
-            fig = plt.figure(figsize=(20, 12))
-            gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
-        else:
-            fig = plt.figure(figsize=(15, 8))
-            gs = fig.add_gridspec(1, 2, hspace=0.3, wspace=0.3)
-        
-        # Confusion Matrix
-        ax1 = fig.add_subplot(gs[0, 0])
-        cm = confusion_matrix(y_true, y_pred)
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                   xticklabels=class_names, yticklabels=class_names, ax=ax1)
-        ax1.set_title('Confusion Matrix', fontweight='bold')
-        ax1.set_xlabel('Predicted')
-        ax1.set_ylabel('True')
-        
-        # Classification metrics heatmap
-        ax2 = fig.add_subplot(gs[0, 1])
-        from sklearn.metrics import classification_report
-        report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
-        
-        classes = [k for k in report.keys() if k not in ['accuracy', 'macro avg', 'weighted avg']]
-        metrics = ['precision', 'recall', 'f1-score']
-        
-        matrix = []
-        labels = []
-        for class_label in classes:
-            if class_label in report:
-                row = [report[class_label][metric] for metric in metrics]
-                matrix.append(row)
-                labels.append(class_names[int(class_label)] if class_names else str(class_label))
-        
-        if matrix:
-            sns.heatmap(matrix, annot=True, fmt='.3f', cmap='RdYlBu_r',
-                       xticklabels=metrics, yticklabels=labels,
-                       vmin=0, vmax=1, ax=ax2)
-        ax2.set_title('Classification Metrics', fontweight='bold')
-        
-        if y_proba is not None:
-            # ROC Curves
-            ax3 = fig.add_subplot(gs[0, 2])
-            lb = LabelBinarizer()
-            y_true_binary = lb.fit_transform(y_true)
-            if y_true_binary.shape[1] == 1:
-                y_true_binary = np.hstack([1 - y_true_binary, y_true_binary])
+        try:
+            # Determine figure layout based on available data
+            if y_proba is not None:
+                fig = plt.figure(figsize=(20, 12))
+                gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+            else:
+                fig = plt.figure(figsize=(15, 8))
+                gs = fig.add_gridspec(1, 2, hspace=0.3, wspace=0.3)
             
-            colors = plt.cm.Set1(np.linspace(0, 1, y_true_binary.shape[1]))
-            for i, color in enumerate(colors):
-                fpr, tpr, _ = roc_curve(y_true_binary[:, i], y_proba[:, i])
-                roc_auc = auc(fpr, tpr)
-                class_name = class_names[i] if class_names else f'Class {i}'
-                ax3.plot(fpr, tpr, color=color, linewidth=2,
-                        label=f'{class_name} (AUC={roc_auc:.3f})')
+            # Confusion Matrix
+            ax1 = fig.add_subplot(gs[0, 0])
+            cm = confusion_matrix(y_true, y_pred)
             
-            ax3.plot([0, 1], [0, 1], 'k--', alpha=0.8)
-            ax3.set_xlabel('False Positive Rate')
-            ax3.set_ylabel('True Positive Rate')
-            ax3.set_title('ROC Curves', fontweight='bold')
-            ax3.legend(loc='lower right', fontsize=8)
-            ax3.grid(True, alpha=0.3)
+            # Get unique labels in a consistent order
+            unique_labels = sorted(list(set(list(y_true) + list(y_pred))))
             
-            # Precision-Recall Curves
-            ax4 = fig.add_subplot(gs[1, 0])
-            for i, color in enumerate(colors):
-                precision, recall, _ = precision_recall_curve(y_true_binary[:, i], y_proba[:, i])
-                pr_auc = auc(recall, precision)
-                class_name = class_names[i] if class_names else f'Class {i}'
-                ax4.plot(recall, precision, color=color, linewidth=2,
-                        label=f'{class_name} (AUC={pr_auc:.3f})')
-            
-            ax4.set_xlabel('Recall')
-            ax4.set_ylabel('Precision')
-            ax4.set_title('Precision-Recall Curves', fontweight='bold')
-            ax4.legend(loc='lower left', fontsize=8)
-            ax4.grid(True, alpha=0.3)
-            
-            # Class distribution comparison
-            ax5 = fig.add_subplot(gs[1, 1:])
-            x = np.arange(len(class_names)) if class_names else np.arange(len(np.unique(y_true)))
-            width = 0.35
-            
-            true_counts = np.bincount(y_true)
-            pred_counts = np.bincount(y_pred, minlength=len(true_counts))
-            
-            ax5.bar(x - width/2, true_counts, width, label='True', alpha=0.8)
-            ax5.bar(x + width/2, pred_counts, width, label='Predicted', alpha=0.8)
-            
-            ax5.set_xlabel('Classes')
-            ax5.set_ylabel('Count')
-            ax5.set_title('Class Distribution Comparison', fontweight='bold')
-            ax5.set_xticks(x)
+            # Create label mapping for display
             if class_names:
-                ax5.set_xticklabels(class_names, rotation=45, ha='right')
-            ax5.legend()
-            ax5.grid(True, alpha=0.3, axis='y')
-        
-        fig.suptitle(f'Evaluation Dashboard - {model_name}', 
-                    fontsize=16, fontweight='bold', y=0.98)
-        
-        if self.save_plots:
-            filename = f"evaluation_dashboard_{model_name.lower().replace(' ', '_')}.png"
-            plt.savefig(self.plot_dir / filename, dpi=300, bbox_inches='tight')
-            logger.info(f"Saved evaluation dashboard: {filename}")
-        
-        return fig
+                # Use class_names as the display names, map to unique_labels
+                display_labels = []
+                for label in unique_labels:
+                    if label in class_names:
+                        display_labels.append(label)
+                    else:
+                        display_labels.append(str(label))
+            else:
+                display_labels = [str(label) for label in unique_labels]
+            
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    xticklabels=display_labels, yticklabels=display_labels, ax=ax1)
+            ax1.set_title('Confusion Matrix', fontweight='bold')
+            ax1.set_xlabel('Predicted')
+            ax1.set_ylabel('True')
+            
+            # Classification metrics heatmap
+            ax2 = fig.add_subplot(gs[0, 1])
+            try:
+                from sklearn.metrics import classification_report
+                report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+                
+                # Extract classes that exist in the report
+                classes = [k for k in report.keys() if k not in ['accuracy', 'macro avg', 'weighted avg']]
+                metrics = ['precision', 'recall', 'f1-score']
+                
+                matrix = []
+                labels = []
+                for class_label in classes:
+                    if class_label in report:
+                        row = [report[class_label][metric] for metric in metrics]
+                        matrix.append(row)
+                        labels.append(str(class_label))  # Always use string representation
+                
+                if matrix:
+                    sns.heatmap(matrix, annot=True, fmt='.3f', cmap='RdYlBu_r',
+                            xticklabels=metrics, yticklabels=labels,
+                            vmin=0, vmax=1, ax=ax2)
+                ax2.set_title('Classification Metrics', fontweight='bold')
+            except Exception as e:
+                ax2.text(0.5, 0.5, f'Classification metrics unavailable\n{str(e)}', 
+                        ha='center', va='center', transform=ax2.transAxes)
+                ax2.set_title('Classification Metrics (Error)', fontweight='bold')
+            
+            if y_proba is not None:
+                try:
+                    # ROC Curves
+                    ax3 = fig.add_subplot(gs[0, 2])
+                    from sklearn.preprocessing import LabelBinarizer
+                    lb = LabelBinarizer()
+                    y_true_binary = lb.fit_transform(y_true)
+                    if y_true_binary.shape[1] == 1:
+                        y_true_binary = np.hstack([1 - y_true_binary, y_true_binary])
+                    
+                    colors = plt.cm.Set1(np.linspace(0, 1, min(y_true_binary.shape[1], len(unique_labels))))
+                    for i, color in enumerate(colors):
+                        if i < y_true_binary.shape[1] and i < y_proba.shape[1]:
+                            fpr, tpr, _ = roc_curve(y_true_binary[:, i], y_proba[:, i])
+                            roc_auc = auc(fpr, tpr)
+                            label_name = display_labels[i] if i < len(display_labels) else f'Class {i}'
+                            ax3.plot(fpr, tpr, color=color, linewidth=2,
+                                    label=f'{label_name} (AUC={roc_auc:.3f})')
+                    
+                    ax3.plot([0, 1], [0, 1], 'k--', alpha=0.8)
+                    ax3.set_xlabel('False Positive Rate')
+                    ax3.set_ylabel('True Positive Rate')
+                    ax3.set_title('ROC Curves', fontweight='bold')
+                    ax3.legend(loc='lower right', fontsize=8)
+                    ax3.grid(True, alpha=0.3)
+                    
+                    # Precision-Recall Curves
+                    ax4 = fig.add_subplot(gs[1, 0])
+                    for i, color in enumerate(colors):
+                        if i < y_true_binary.shape[1] and i < y_proba.shape[1]:
+                            precision, recall, _ = precision_recall_curve(y_true_binary[:, i], y_proba[:, i])
+                            pr_auc = auc(recall, precision)
+                            label_name = display_labels[i] if i < len(display_labels) else f'Class {i}'
+                            ax4.plot(recall, precision, color=color, linewidth=2,
+                                    label=f'{label_name} (AUC={pr_auc:.3f})')
+                    
+                    ax4.set_xlabel('Recall')
+                    ax4.set_ylabel('Precision')
+                    ax4.set_title('Precision-Recall Curves', fontweight='bold')
+                    ax4.legend(loc='lower left', fontsize=8)
+                    ax4.grid(True, alpha=0.3)
+                    
+                    # Class distribution comparison
+                    ax5 = fig.add_subplot(gs[1, 1:])
+                    
+                    # Count occurrences of each unique label
+                    true_counts = []
+                    pred_counts = []
+                    for label in unique_labels:
+                        true_counts.append(np.sum(y_true == label))
+                        pred_counts.append(np.sum(y_pred == label))
+                    
+                    x = np.arange(len(unique_labels))
+                    width = 0.35
+                    
+                    ax5.bar(x - width/2, true_counts, width, label='True', alpha=0.8)
+                    ax5.bar(x + width/2, pred_counts, width, label='Predicted', alpha=0.8)
+                    
+                    ax5.set_xlabel('Classes')
+                    ax5.set_ylabel('Count')
+                    ax5.set_title('Class Distribution Comparison', fontweight='bold')
+                    ax5.set_xticks(x)
+                    ax5.set_xticklabels(display_labels, rotation=45, ha='right')
+                    ax5.legend()
+                    ax5.grid(True, alpha=0.3, axis='y')
+                    
+                except Exception as e:
+                    logger.warning(f"Error creating probability-based plots: {e}")
+            
+            fig.suptitle(f'Evaluation Dashboard - {model_name}', 
+                        fontsize=16, fontweight='bold', y=0.98)
+            
+            if self.save_plots:
+                filename = f"evaluation_dashboard_{model_name.lower().replace(' ', '_')}.png"
+                plt.savefig(self.plot_dir / filename, dpi=300, bbox_inches='tight')
+                logger.info(f"Saved evaluation dashboard: {filename}")
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Error creating evaluation dashboard: {e}")
+            # Return a simple error plot
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.text(0.5, 0.5, f'Dashboard creation failed:\n{str(e)}', 
+                    ha='center', va='center', transform=ax.transAxes, fontsize=12)
+            ax.set_title(f'Evaluation Dashboard - {model_name} (Error)', fontweight='bold')
+            return fig
 
 
 def test_visualization():
