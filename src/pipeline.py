@@ -15,11 +15,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 
-from src.config import config
-from src.data import AISDataLoader, AISPreprocessor, setup_data_paths
-from src.features import TrajectoryKalmanFilter, VesselFeatureExtractor
-from src.models import StackingEnsemble
-from src.utils import ModelEvaluator, ModelVisualizer
+try:
+    # Try relative imports first (when running as part of package)
+    from .config import config
+    from .data import AISDataLoader, AISPreprocessor, setup_data_paths
+    from .features import TrajectoryKalmanFilter, VesselFeatureExtractor
+    from .models import StackingEnsemble
+    from .utils import ModelEvaluator, ModelVisualizer
+except ImportError:
+    # Fall back to absolute imports (when running directly or in development)
+    from src.config import config
+    from src.data import AISDataLoader, AISPreprocessor, setup_data_paths
+    from src.features import TrajectoryKalmanFilter, VesselFeatureExtractor
+    from src.models import StackingEnsemble
+    from src.utils import ModelEvaluator, ModelVisualizer
 
 warnings.filterwarnings("ignore")
 

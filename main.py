@@ -10,15 +10,24 @@ from pathlib import Path
 
 from loguru import logger
 
-# Try to import from installed package first, fallback to development mode
+# Ensure src is in Python path for both development and CI environments
+src_path = str(Path(__file__).parent / "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+# Add project root to path as well for absolute imports
+project_root = str(Path(__file__).parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Now import the modules
 try:
     from src.config import config, load_config_from_yaml
     from src.pipeline import MaritimePipeline
-except ImportError:
-    # Add src to path for development mode
-    sys.path.insert(0, str(Path(__file__).parent / "src"))
-    from src.config import config, load_config_from_yaml
-    from src.pipeline import MaritimePipeline
+except ImportError as e:
+    logger.error(f"Failed to import required modules: {e}")
+    logger.error("Please ensure the package is properly installed with 'pip install -e .'")
+    sys.exit(1)
 
 
 def setup_logging(log_level: str = "INFO", log_file: str = None):
