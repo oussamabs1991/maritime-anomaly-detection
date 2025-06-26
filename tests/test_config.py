@@ -8,9 +8,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+# Add src to path before importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.config import Config, config, load_config_from_yaml
+from src.config import Config, config, load_config_from_yaml  # noqa: E402
 
 
 class TestConfig:

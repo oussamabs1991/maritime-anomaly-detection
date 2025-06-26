@@ -107,7 +107,6 @@ class VesselFeatureExtractor:
         lat = group["LAT_smoothed"].values
         lon = group["LON_smoothed"].values
         sog = group["SOG"].values
-        cog = group["COG"].values
         times = group["BaseDateTime"]
         n_points = len(group)
 

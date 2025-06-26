@@ -1,8 +1,7 @@
 """
 Data preprocessing utilities for AIS data
 """
-import warnings
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -13,7 +12,9 @@ from ..config import config
 
 
 class AISPreprocessor:
-    """Handles preprocessing of AIS data including vessel type reduction and trajectory processing"""
+    """
+    Handles preprocessing of AIS data including vessel type reduction and trajectory processing
+    """
 
     def __init__(self, config_obj=None):
         self.config = config_obj or config
@@ -53,7 +54,7 @@ class AISPreprocessor:
         # Remove rows where VesselType became NaN
         df = df.dropna(subset=["VesselType"])
 
-        logger.info(f"Vessel type distribution after reduction:")
+        logger.info("Vessel type distribution after reduction:")
         type_counts = df["VesselType"].value_counts()
         for vtype, count in type_counts.items():
             logger.info(f"  {vtype}: {count} ({count/len(df)*100:.1f}%)")

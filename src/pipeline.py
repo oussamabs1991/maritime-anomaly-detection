@@ -1,11 +1,10 @@
 """
 Main pipeline for maritime vessel type classification
 """
-import gc
 import time
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 import joblib
 import numpy as np
@@ -69,8 +68,7 @@ class MaritimePipeline:
             test_feature_extraction()
 
             # Test models
-            from .models import (test_deep_learning_models,
-                                 test_traditional_models)
+            from .models import test_deep_learning_models, test_traditional_models
 
             test_traditional_models()
             test_deep_learning_models()
@@ -186,7 +184,7 @@ class MaritimePipeline:
         df_smoothed = self.kalman_filter.process_all_trajectories(df)
 
         # Validate smoothing quality
-        quality_metrics = self.kalman_filter.validate_smoothing_quality(df_smoothed)
+        self.kalman_filter.validate_smoothing_quality(df_smoothed)
 
         logger.info(f"Trajectory smoothing completed in {time.time() - start_time:.2f} seconds")
 
@@ -396,7 +394,8 @@ class MaritimePipeline:
 
         if has_sequences:
             logger.info(
-                f"Training with sequence data - features: {X_train.shape}, sequences: {seq_train.shape}"
+                f"Training with sequence data - features: {X_train.shape}, "
+                f"sequences: {seq_train.shape}"
             )
 
             # For sequence data, we need to be careful with SMOTE
@@ -411,29 +410,33 @@ class MaritimePipeline:
             """
             # Apply SMOTE to features only
             X_train_smote, y_train_smote = self.apply_smote(X_train, y_train)
-            
+
             if len(X_train_smote) > len(X_train):
                 # SMOTE was applied, need to handle sequences
-                logger.info(f"SMOTE expanded dataset from {len(X_train)} to {len(X_train_smote)} samples")
-                
+                logger.info(
+                    f"SMOTE expanded dataset from {len(X_train)} to {len(X_train_smote)} samples"
+                )
+
                 # Create mapping for synthetic samples
                 # For synthetic samples, we'll use the sequence from the nearest original sample
-                seq_train_expanded = np.zeros((len(X_train_smote), seq_train.shape[1], seq_train.shape[2]))
-                
+                seq_train_expanded = np.zeros(
+                    (len(X_train_smote), seq_train.shape[1], seq_train.shape[2])
+                )
+
                 # Copy original sequences
-                seq_train_expanded[:len(X_train)] = seq_train
-                
+                seq_train_expanded[: len(X_train)] = seq_train
+
                 # For synthetic samples, replicate sequences from original samples
-                # This is a simplified approach - in practice, you might want more sophisticated sequence generation
+                # This is a simplified approach - in practice, you might want more sophisticated
+                # sequence generation
                 for i in range(len(X_train), len(X_train_smote)):
                     # Use sequence from a random original sample
                     orig_idx = np.random.randint(0, len(X_train))
                     seq_train_expanded[i] = seq_train[orig_idx]
-                
+
                 seq_train_final = seq_train_expanded
             else:
                 seq_train_final = seq_train
-                
             X_train_final = X_train_smote
             y_train_final = y_train_smote
             """

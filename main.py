@@ -5,17 +5,20 @@ This script provides the main interface for running the maritime vessel type
 classification pipeline using AIS data.
 """
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from loguru import logger
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-from src.config import config, load_config_from_yaml
-from src.pipeline import MaritimePipeline
+# Try to import from installed package first, fallback to development mode
+try:
+    from src.config import config, load_config_from_yaml
+    from src.pipeline import MaritimePipeline
+except ImportError:
+    # Add src to path for development mode
+    sys.path.insert(0, str(Path(__file__).parent / "src"))
+    from src.config import config, load_config_from_yaml
+    from src.pipeline import MaritimePipeline
 
 
 def setup_logging(log_level: str = "INFO", log_file: str = None):
@@ -26,7 +29,11 @@ def setup_logging(log_level: str = "INFO", log_file: str = None):
     # Add console logger
     logger.add(
         sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        format=(
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
+            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+            "<level>{message}</level>"
+        ),
         level=log_level,
         colorize=True,
     )
@@ -35,7 +42,9 @@ def setup_logging(log_level: str = "INFO", log_file: str = None):
     if log_file:
         logger.add(
             log_file,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+            format=(
+                "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | " "{name}:{function}:{line} - {message}"
+            ),
             level=log_level,
             rotation="10 MB",
             retention="1 week",
@@ -52,18 +61,19 @@ def main():
 Examples:
   # Run with ZIP file
   python main.py --zip-file data/AIS_2024_10_24.zip --csv-name AIS_2024_10_24.csv
-  
+
   # Run in test mode
   python main.py --zip-file data/AIS_2024_10_24.zip --csv-name AIS_2024_10_24.csv --test-mode
-  
+
   # Run with custom config
   python main.py --config config.yaml --zip-file data/AIS_2024_10_24.zip
-  
+
   # Run smoke tests only
   python main.py --smoke-tests-only
-  
+
   # Load and evaluate existing model
-  python main.py --load-model models/ensemble_model.joblib --zip-file data/test.zip --csv-name test.csv
+  python main.py --load-model models/ensemble_model.joblib --zip-file data/test.zip \\
+    --csv-name test.csv
         """,
     )
 
@@ -204,7 +214,7 @@ Examples:
                 # Create visualizations
                 predictions = pipeline.ensemble.predict(X_scaled, sequences)
                 probabilities = pipeline.ensemble.predict_proba(X_scaled, sequences)
-                plots = pipeline.create_visualizations(y, predictions, probabilities, class_names)
+                pipeline.create_visualizations(y, predictions, probabilities, class_names)
 
                 logger.info("Model evaluation completed")
 

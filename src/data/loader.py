@@ -1,13 +1,10 @@
 """
 Data loading utilities for AIS data
 """
-import os
-import warnings
 import zipfile
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -236,7 +233,8 @@ class AISDataLoader:
 
         final_count = len(df)
         logger.info(
-            f"Validation complete: {final_count} records ({final_count/initial_count*100:.1f}% retained)"
+            f"Validation complete: {final_count} records "
+            f"({final_count/initial_count*100:.1f}% retained)"
         )
 
         return df

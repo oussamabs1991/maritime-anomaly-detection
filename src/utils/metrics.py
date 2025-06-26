@@ -1,15 +1,20 @@
 """
 Evaluation metrics and performance analysis utilities
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 from loguru import logger
-from sklearn.metrics import (accuracy_score, auc, classification_report,
-                             confusion_matrix, f1_score,
-                             precision_recall_curve, precision_score,
-                             recall_score, roc_auc_score, roc_curve)
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.preprocessing import LabelBinarizer
 
 
@@ -318,28 +323,28 @@ class ModelEvaluator:
             print(f"Classes: {results['n_classes']}")
 
             # Basic metrics
-            print(f"\nBASIC METRICS:")
-            print(f"-" * 30)
+            print("\nBASIC METRICS:")
+            print("-" * 30)
             basic_metrics = results["basic_metrics"]
             for metric, value in basic_metrics.items():
                 print(f"{metric.capitalize():<15}: {value:.4f}")
 
             # AUC metrics
             if "auc_metrics" in results:
-                print(f"\nAUC METRICS:")
-                print(f"-" * 30)
+                print("\nAUC METRICS:")
+                print("-" * 30)
                 for metric, value in results["auc_metrics"].items():
                     print(f"{metric.upper():<15}: {value:.4f}")
 
             # Confusion matrix
-            print(f"\nCONFUSION MATRIX:")
-            print(f"-" * 30)
+            print("\nCONFUSION MATRIX:")
+            print("-" * 30)
             print(results["confusion_matrix"])
 
             # Per-class metrics
             if not results["per_class_metrics"].empty:
-                print(f"\nPER-CLASS METRICS:")
-                print(f"-" * 30)
+                print("\nPER-CLASS METRICS:")
+                print("-" * 30)
                 print(results["per_class_metrics"].round(4))
 
 
@@ -362,7 +367,7 @@ def test_metrics():
     logger.info("Testing model evaluation metrics")
 
     # Evaluate a model
-    results = evaluator.evaluate_model(y_true, y_pred, y_proba, class_names, "test_model")
+    evaluator.evaluate_model(y_true, y_pred, y_proba, class_names, "test_model")
 
     # Test another model for comparison
     y_pred2 = np.random.randint(0, n_classes, n_samples)

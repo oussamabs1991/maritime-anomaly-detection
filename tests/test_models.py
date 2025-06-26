@@ -5,14 +5,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pytest
 
+# Add src to path before importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.config import Config
-from src.models import (DeepLearningModels, StackingEnsemble,
-                        TraditionalMLModels)
+from src.config import Config  # noqa: E402
+from src.models import DeepLearningModels, StackingEnsemble, TraditionalMLModels  # noqa: E402
 
 
 class TestTraditionalMLModels:
